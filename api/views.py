@@ -3,10 +3,10 @@ from django.http import HttpResponse
 from rest_framework.renderers import JSONRenderer
 from rest_framework.decorators import api_view
 import json
-
+from django.views.decorators.csrf import csrf_exempt, csrf_protect
 
 from azure.models import resource,resourcegroup,Hero
-from .serializers import resourceSerializer, resourcegroupSerializer
+from .serializers import resourceSerializer, resourcegroupSerializer, heroSerializer
 # Create your views here.
 
 class JSONResponse(HttpResponse):
@@ -35,24 +35,34 @@ def index(request):
     response_data['datas'] = json_list
     return HttpResponse(json.dumps(response_data), content_type="application/json")
 
+@csrf_exempt
 def heros(request):
-    all_hero = Hero.objects.all()
-    all_resource = resource.objects.all()
-    json_list = []
-    for post in all_hero:
-        json_dict = {}
-        json_dict['id'] = post.id
-        json_dict['name'] = post.name
-        json_list.append(json_dict)
-        response_data = {}
-    result = {}
-    result['status'] = 'success'
-    result['message'] = 'Test response'
-    response_data['result'] = result
-    response_data['datas'] = json_list
-    
-    # url(r'^users/(?P<user_id>\d+)/$', 'viewname', name='urlname')
-    return HttpResponse(json.dumps(response_data), content_type="application/json")
+    if request.method == 'POST':
+        received_json_data = json.loads(request.body)
+        print(received_json_data)
+        hero = heroSerializer(data=received_json_data)
+        hero.is_valid()
+        hero.save()
+        return HttpResponse(json.dumps(received_json_data), content_type="application/json")
+    if request.method == 'GET':
+        all_hero = Hero.objects.all()
+        all_resource = resource.objects.all()
+        json_list = []
+        
+        for post in all_hero:
+            json_dict = {}
+            json_dict['id'] = post.id
+            json_dict['name'] = post.name
+            json_list.append(json_dict)
+            response_data = {}
+        result = {}
+        result['status'] = 'success'
+        result['message'] = 'Test response'
+        response_data['result'] = result
+        response_data['datas'] = json_list
+        
+        # url(r'^users/(?P<user_id>\d+)/$', 'viewname', name='urlname')
+        return HttpResponse(json.dumps(response_data), content_type="application/json")
 
 @api_view(['GET'])
 def resources(request):
